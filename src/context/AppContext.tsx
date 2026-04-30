@@ -124,39 +124,47 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addProduct = async (product: Omit<Product, 'id'>) => {
-    const { data } = await supabase.from('products').insert([product]).select().single();
+    const { data, error } = await supabase.from('products').insert([product]).select().single();
+    if (error) { console.error(error); alert("Erro ao salvar: " + error.message); }
     if (data) setState(s => ({ ...s, products: [...s.products, data] }));
   };
 
   const updateProduct = async (id: string, updates: Partial<Omit<Product, 'id'>>) => {
-    await supabase.from('products').update(updates).eq('id', id);
+    const { error } = await supabase.from('products').update(updates).eq('id', id);
+    if (error) { console.error(error); alert("Erro ao atualizar: " + error.message); }
   };
 
   const removeProduct = async (id: string) => {
-    await supabase.from('products').delete().eq('id', id);
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) { console.error(error); alert("Erro ao deletar: " + error.message); }
   };
 
   const addCollaborator = async (collaborator: Omit<Collaborator, 'id'>) => {
-    const { data } = await supabase.from('collaborators').insert([collaborator]).select().single();
+    const { data, error } = await supabase.from('collaborators').insert([collaborator]).select().single();
+    if (error) { console.error(error); alert("Erro ao salvar: " + error.message); }
     if (data) setState(s => ({ ...s, collaborators: [...s.collaborators, data] }));
   };
 
   const removeCollaborator = async (id: string) => {
-    await supabase.from('collaborators').delete().eq('id', id);
+    const { error } = await supabase.from('collaborators').delete().eq('id', id);
+    if (error) { console.error(error); alert("Erro ao deletar: " + error.message); }
   };
 
   const addPhoto = async (photo: Omit<Photo, 'id'>) => {
-    const { data } = await supabase.from('photos').insert([photo]).select().single();
+    const { data, error } = await supabase.from('photos').insert([photo]).select().single();
+    if (error) { console.error(error); alert("Erro ao salvar: " + error.message); }
     if (data) setState(s => ({ ...s, photos: [...s.photos, data] }));
   };
 
   const removePhoto = async (id: string) => {
-    await supabase.from('photos').delete().eq('id', id);
+    const { error } = await supabase.from('photos').delete().eq('id', id);
+    if (error) { console.error(error); alert("Erro ao deletar: " + error.message); }
   };
 
   const updateGoal = async (goal: number) => {
      // UPSERT no Supabase
      const { data, error } = await supabase.from('settings').upsert({ id: 'general', goal }).select().single();
+     if (error) { console.error(error); alert("Erro ao salvar meta: " + error.message); }
      if (data) setState(s => ({ ...s, goal: data.goal }));
   };
 
