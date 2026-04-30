@@ -3,9 +3,13 @@ import { Target, Users, Camera, Heart, Flame, Award, Zap, Shield, TrendingUp, Lo
 import { useAppContext } from '../context/AppContext';
 
 export default function Home() {
-  const { state, totalValue } = useAppContext();
+  const { state, totalValue, loading } = useAppContext();
   const PHOTOS = state.photos;
   const COLLABORATORS = state.collaborators;
+
+  if (loading) {
+    return <div className="min-h-screen bg-black flex justify-center items-center text-white"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>;
+  }
 
   return (
     <div className="min-h-screen bg-black text-white font-sans">

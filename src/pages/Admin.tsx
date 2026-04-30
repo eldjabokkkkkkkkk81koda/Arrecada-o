@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { Target, Users, Camera, Shield, LogOut, Upload, Trash2, Plus, Edit2, Check, TrendingUp } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Target, Users, Camera, Shield, LogOut, Upload, Trash2, Plus, Edit2, TrendingUp, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Admin() {
@@ -10,7 +9,7 @@ export default function Admin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const { state, addProduct, updateProduct, removeProduct, addCollaborator, removeCollaborator, addPhoto, removePhoto, updateGoal, totalValue } = useAppContext();
+  const { state, addProduct, updateProduct, removeProduct, addCollaborator, removeCollaborator, addPhoto, removePhoto, updateGoal, totalValue, loading } = useAppContext();
 
   // Dialog states
   const [newProduct, setNewProduct] = useState({ name: '', price: 0, quantity: 0 });
@@ -35,6 +34,10 @@ export default function Admin() {
     setIsAuthenticated(false);
     localStorage.removeItem('isAdmin');
   };
+
+  if (loading) {
+    return <div className="min-h-screen bg-black flex justify-center items-center text-white"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>;
+  }
 
   if (!isAuthenticated) {
     return (
@@ -101,6 +104,14 @@ export default function Admin() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 space-y-16">
+        
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex gap-3 text-emerald-500 text-sm">
+          <Shield className="w-5 h-5 shrink-0" />
+          <p>
+            <strong>Conectado ao Supabase com Sucesso!</strong><br/>
+            As alterações feitas aqui serão salvas no seu banco de dados na nuvem e aparecerão para todos os acessos.
+          </p>
+        </div>
         
         {/* Meta Section */}
         <section>

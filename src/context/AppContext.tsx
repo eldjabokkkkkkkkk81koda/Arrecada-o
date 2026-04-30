@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '../supabase';
 
 export interface Product {
   id: string;
@@ -37,69 +38,126 @@ interface AppContextType {
   removePhoto: (id: string) => void;
   updateGoal: (goal: number) => void;
   totalValue: number;
+  loading: boolean;
 }
 
 const defaultState: AppState = {
-  products: [
-    { id: '1', name: 'Arroz (1kg)', price: 5.50, quantity: 1500 },
-    { id: '2', name: 'Feijão (1kg)', price: 7.20, quantity: 583 }
-  ],
-  collaborators: [
-    { id: '1', name: 'Supermercado Central', role: 'Parceiro Master' },
-    { id: '2', name: 'João Silva', role: 'Coordenador Logística' }
-  ],
-  photos: [
-    { id: '1', url: 'https://images.unsplash.com/photo-1593113565214-80af30e0081d?auto=format&fit=crop&q=80&w=800' },
-    { id: '2', url: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?auto=format&fit=crop&q=80&w=800' }
-  ],
+  products: [],
+  collaborators: [],
+  photos: [],
   goal: 20000
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<AppState>(() => {
-    const saved = localStorage.getItem('gincana_state');
-    return saved ? JSON.parse(saved) : defaultState;
-  });
+  const [state, setState] = useState<AppState>(defaultState);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem('gincana_state', JSON.stringify(state));
-  }, [state]);
+    // Carregar dados iniciais
+    const fetchData = async () => {
+      const [productsRes, collabsRes, photosRes, settingsRes] = await Promise.all([
+        supabase.from('products').select('*'),
+        supabase.from('collaborators').select('*'),
+        supabase.from('photos').select('*'),
+        supabase.from('settings').select('*').eq('id', 'general').single()
+      ]);
 
-  const addProduct = (product: Omit<Product, 'id'>) => {
-    setState(s => ({ ...s, products: [...s.products, { ...product, id: Date.now().toString() }] }));
+      setState(s => ({
+        ...s,
+        products: productsRes.data || [],
+        collaborators: collabsRes.data || [],
+        photos: photosRes.data || [],
+        goal: settingsRes.data?.goal || 20000
+      }));
+      setLoading(false);
+    };
+
+    fetchData();
+
+    // Inscrever para atualizações em tempo real
+    const productsSub = supabase.channel('products-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, payload => {
+        if (payload.eventType === 'INSERT') {
+          setState(s => ({ ...s, products: [...s.products, payload.new as Product] }));
+        } else if (payload.eventType === 'UPDATE') {
+          setState(s => ({ ...s, products: s.products.map(p => p.id === payload.new.id ? payload.new as Product : p) }));
+        } else if (payload.eventType === 'DELETE') {
+          setState(s => ({ ...s, products: s.products.filter(p => p.id !== payload.old.id) }));
+        }
+      }).subscribe();
+
+    const collabsSub = supabase.channel('collaborators-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'collaborators' }, payload => {
+        if (payload.eventType === 'INSERT') {
+          setState(s => ({ ...s, collaborators: [...s.collaborators, payload.new as Collaborator] }));
+        } else if (payload.eventType === 'UPDATE') {
+          setState(s => ({ ...s, collaborators: s.collaborators.map(c => c.id === payload.new.id ? payload.new as Collaborator : c) }));
+        } else if (payload.eventType === 'DELETE') {
+          setState(s => ({ ...s, collaborators: s.collaborators.filter(c => c.id !== payload.old.id) }));
+        }
+      }).subscribe();
+
+    const photosSub = supabase.channel('photos-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'photos' }, payload => {
+        if (payload.eventType === 'INSERT') {
+          setState(s => ({ ...s, photos: [...s.photos, payload.new as Photo] }));
+        } else if (payload.eventType === 'DELETE') {
+          setState(s => ({ ...s, photos: s.photos.filter(p => p.id !== payload.old.id) }));
+        }
+      }).subscribe();
+
+    const settingsSub = supabase.channel('settings-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, payload => {
+        if (payload.eventType === 'UPDATE' && payload.new.id === 'general') {
+          setState(s => ({ ...s, goal: payload.new.goal }));
+        }
+      }).subscribe();
+
+    return () => {
+      supabase.removeChannel(productsSub);
+      supabase.removeChannel(collabsSub);
+      supabase.removeChannel(photosSub);
+      supabase.removeChannel(settingsSub);
+    };
+  }, []);
+
+  const addProduct = async (product: Omit<Product, 'id'>) => {
+    const { data } = await supabase.from('products').insert([product]).select().single();
+    if (data) setState(s => ({ ...s, products: [...s.products, data] }));
   };
 
-  const updateProduct = (id: string, updates: Partial<Omit<Product, 'id'>>) => {
-    setState(s => ({
-      ...s,
-      products: s.products.map(p => p.id === id ? { ...p, ...updates } : p)
-    }));
+  const updateProduct = async (id: string, updates: Partial<Omit<Product, 'id'>>) => {
+    await supabase.from('products').update(updates).eq('id', id);
   };
 
-  const removeProduct = (id: string) => {
-    setState(s => ({ ...s, products: s.products.filter(p => p.id !== id) }));
+  const removeProduct = async (id: string) => {
+    await supabase.from('products').delete().eq('id', id);
   };
 
-  const addCollaborator = (collaborator: Omit<Collaborator, 'id'>) => {
-    setState(s => ({ ...s, collaborators: [...s.collaborators, { ...collaborator, id: Date.now().toString() }] }));
+  const addCollaborator = async (collaborator: Omit<Collaborator, 'id'>) => {
+    const { data } = await supabase.from('collaborators').insert([collaborator]).select().single();
+    if (data) setState(s => ({ ...s, collaborators: [...s.collaborators, data] }));
   };
 
-  const removeCollaborator = (id: string) => {
-    setState(s => ({ ...s, collaborators: s.collaborators.filter(c => c.id !== id) }));
+  const removeCollaborator = async (id: string) => {
+    await supabase.from('collaborators').delete().eq('id', id);
   };
 
-  const addPhoto = (photo: Omit<Photo, 'id'>) => {
-    setState(s => ({ ...s, photos: [...s.photos, { ...photo, id: Date.now().toString() }] }));
+  const addPhoto = async (photo: Omit<Photo, 'id'>) => {
+    const { data } = await supabase.from('photos').insert([photo]).select().single();
+    if (data) setState(s => ({ ...s, photos: [...s.photos, data] }));
   };
 
-  const removePhoto = (id: string) => {
-    setState(s => ({ ...s, photos: s.photos.filter(p => p.id !== id) }));
+  const removePhoto = async (id: string) => {
+    await supabase.from('photos').delete().eq('id', id);
   };
 
-  const updateGoal = (goal: number) => {
-    setState(s => ({ ...s, goal }));
+  const updateGoal = async (goal: number) => {
+     // UPSERT no Supabase
+     const { data, error } = await supabase.from('settings').upsert({ id: 'general', goal }).select().single();
+     if (data) setState(s => ({ ...s, goal: data.goal }));
   };
 
   const totalValue = state.products.reduce((acc, p) => acc + (p.price * p.quantity), 0);
@@ -107,7 +165,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <AppContext.Provider value={{
       state, addProduct, updateProduct, removeProduct,
-      addCollaborator, removeCollaborator, addPhoto, removePhoto, updateGoal, totalValue
+      addCollaborator, removeCollaborator, addPhoto, removePhoto, updateGoal, totalValue,
+      loading
     }}>
       {children}
     </AppContext.Provider>
