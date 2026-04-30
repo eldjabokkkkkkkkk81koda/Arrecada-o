@@ -1,0 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&family=Open+Sans:wght@400;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-vinho: #800000;
+  --color-vinho-light: #993333;
+  --color-vinho-dark: #660000;
+  --font-sans: "Open Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  @apply bg-[#000000] text-white;
+}
