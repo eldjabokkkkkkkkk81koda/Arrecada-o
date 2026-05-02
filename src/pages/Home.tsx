@@ -170,9 +170,6 @@ export default function Home() {
                   Registros da nossa equipe nas ruas, mercados e triagens. Cada foto é um passo em direção a um mundo sem fome (ODS 2).
                 </p>
               </div>
-              <button className="px-6 py-3 bg-vinho hover:bg-vinho-light text-white font-semibold rounded-full transition-colors flex items-center gap-2 whitespace-nowrap">
-                Enviar Foto <Camera className="w-4 h-4" />
-              </button>
             </div>
 
             <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6">
