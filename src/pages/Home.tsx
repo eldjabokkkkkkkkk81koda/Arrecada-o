@@ -188,8 +188,11 @@ export default function Home() {
                   <img 
                     src={photo.url} 
                     alt={`Ação da equipe ${idx + 1}`} 
-                    className="w-full rounded-2xl object-cover border border-zinc-800"
+                    className="w-full rounded-2xl object-cover border border-zinc-800 bg-zinc-900"
                     loading="lazy"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1594322436404-5a0526db4d13?auto=format&fit=crop&q=80&w=800'; // Default fallback error image
+                    }}
                   />
                 </motion.div>
               ))}

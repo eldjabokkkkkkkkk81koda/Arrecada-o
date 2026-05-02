@@ -285,8 +285,26 @@ export default function Admin() {
                   <input type="text" value={newCollab.role} onChange={e => setNewCollab({...newCollab, role: e.target.value})} className="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-sm" placeholder="ex: Patrocinador Master" />
                </div>
                <div>
-                  <label className="block text-xs font-medium mb-1 text-zinc-400">URL da Logo (Opcional)</label>
-                  <input type="text" value={newCollab.logoUrl} onChange={e => setNewCollab({...newCollab, logoUrl: e.target.value})} className="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-sm" placeholder="https://link-da-imagem.com/logo.png" />
+                  <label className="block text-xs font-medium mb-1 text-zinc-400">Logo</label>
+                  <div className="flex bg-black border border-zinc-800 rounded-xl p-1 gap-2">
+                     <label className="flex-1 flex justify-center items-center cursor-pointer bg-zinc-800 hover:bg-zinc-700 text-xs text-white rounded-lg py-1 transition-colors">
+                        Escolher Arquivo do PC
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              if (file.size > 1 * 1024 * 1024) { alert("A logo deve ter no máximo 1MB."); return; }
+                              const reader = new FileReader();
+                              reader.onloadend = () => setNewCollab({...newCollab, logoUrl: reader.result as string});
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                     </label>
+                  </div>
                </div>
                <button 
                   onClick={() => {
@@ -300,6 +318,11 @@ export default function Admin() {
                   Adicionar Colaborador
                </button>
              </div>
+             {newCollab.logoUrl && newCollab.logoUrl.startsWith('data:image') && (
+               <div className="mt-4 text-xs text-emerald-400 flex items-center gap-1">
+                 <Shield className="w-3 h-3" /> Logo selecionada e pronta para salvar!
+               </div>
+             )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -335,31 +358,79 @@ export default function Admin() {
              </div>
           </div>
           
-          <div className="flex gap-4 mb-8">
-            <input 
-              type="text" 
-              value={newPhotoUrl} 
-              onChange={e => setNewPhotoUrl(e.target.value)} 
-              className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl p-3 focus:outline-none focus:border-vinho-light" 
-              placeholder="Cole o link (URL) da foto (ex: https://unsplash.com/foto.jpg)" 
-            />
-            <button 
-               onClick={() => {
-                 if (newPhotoUrl) {
-                   addPhoto({ url: newPhotoUrl });
-                   setNewPhotoUrl('');
-                 }
-               }}
-               className="bg-vinho hover:bg-vinho-light px-6 py-3 rounded-xl font-bold transition-colors whitespace-nowrap flex items-center gap-2"
-            >
-              <Upload className="w-4 h-4" /> Adicionar Foto
-            </button>
+          <div className="bg-zinc-900 rounded-2xl border border-zinc-800 p-6 mb-8">
+            <div className="flex flex-col md:flex-row gap-4 mb-4">
+              <div className="flex-1">
+                <label className="block text-xs font-medium mb-2 text-zinc-400">1. Escolher arquivo do seu Celular/Computador (Recomendado)</label>
+                <label className="flex w-full justify-center items-center cursor-pointer bg-zinc-800 hover:bg-zinc-700 border border-dashed border-zinc-600 hover:border-vinho-light text-white rounded-xl py-4 transition-colors gap-2">
+                  <Upload className="w-5 h-5 text-zinc-400" />
+                  <span className="font-medium text-sm">Clique para escolher uma imagem</span>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (file.size > 2 * 1024 * 1024) { alert("A imagem não pode passar de 2MB por causa de limites de banco de dados. Tente uma imagem mais leve."); return; }
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          addPhoto({ url: reader.result as string });
+                          alert("Foto adicionada com sucesso!");
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+
+              <div className="flex items-center justify-center">
+                <span className="text-zinc-600 font-bold uppercase text-xs">OU</span>
+              </div>
+
+              <div className="flex-1">
+                <label className="block text-xs font-medium mb-2 text-zinc-400">2. Colar um Link de Imagem Direto (ex: .png ou .jpg)</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={newPhotoUrl} 
+                    onChange={e => setNewPhotoUrl(e.target.value)} 
+                    className="flex-1 bg-black border border-zinc-800 rounded-xl p-3 focus:outline-none focus:border-vinho-light text-sm" 
+                    placeholder="https://exemplo.com/foto.jpg" 
+                  />
+                  <button 
+                     onClick={() => {
+                       if (newPhotoUrl) {
+                         addPhoto({ url: newPhotoUrl });
+                         setNewPhotoUrl('');
+                       }
+                     }}
+                     className="bg-zinc-800 hover:bg-vinho text-white px-4 py-3 rounded-xl font-bold transition-colors whitespace-nowrap text-sm"
+                  >
+                    Adicionar URL
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <p className="text-xs text-zinc-500 bg-black p-3 rounded-lg border border-zinc-800">
+              <AlertTriangle className="w-4 h-4 inline mr-1 text-amber-500 mb-1" />
+              <strong>Se for colar um link:</strong> Lembre-se que você precisa do link <strong>DIRETO</strong> da imagem (que acabe em .png, .jpg). Se usar sites de envio de imagem (como jmgbb ou imgbb), você não pode colar o link da página. Clique na imagem no site com o botão direito e escolha "Copiar endereço da imagem".
+            </p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
              {state.photos.map(p => (
                 <div key={p.id} className="relative group rounded-xl overflow-hidden aspect-video bg-zinc-900 border border-zinc-800">
-                  <img src={p.url} alt="Mural" className="w-full h-full object-cover" />
+                  <img 
+                    src={p.url} 
+                    alt="Mural" 
+                    className="w-full h-full object-cover" 
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1594322436404-5a0526db4d13?auto=format&fit=crop&q=80&w=800';
+                    }}
+                  />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <button onClick={() => removePhoto(p.id)} className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg">
                       <Trash2 className="w-4 h-4" />
